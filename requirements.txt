@@ -1,0 +1,24 @@
+# N225BrokerBridge 配布物の Python 依存物
+# 用途: dashboard (n225_brokerbridge_dashboard.py) と analysis (N225LLMAdvisor) の起動。
+#
+# インストール:
+#   cd <public リポを clone した場所>
+#   python -m venv .venv
+#   .venv\Scripts\activate
+#   pip install -r <このファイルのパス>
+#
+# ※ Bridge 本体 (.NET 8 / C# / WPF) は Python 不要。Python が要るのは
+#   ダッシュボードと朝の市場分析だけ。
+
+# ── dashboard 用 ────────────────────────────────
+# n225_brokerbridge_dashboard.py は Python 標準ライブラリ
+# (tkinter / urllib / subprocess) のみで動くため追加パッケージは不要。
+# tkinter は Python 3.10+ の標準同梱モジュール。
+
+# ── analysis (N225LLMAdvisor) 用 ──────────────
+pandas>=2.0
+markdown>=3.5
+
+# ── 朝分析の市場データ取得を将来 LLM 経由にする場合 (オプション) ──
+# groq>=0.5.0
+# anthropic>=0.30.0

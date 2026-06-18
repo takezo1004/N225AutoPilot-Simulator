@@ -1,0 +1,45 @@
+# N225AutoPilot-Simulator（製品1・無料サンプル・Public）用 .gitignore
+#
+# 案A：bridge ソース＋テストダッシュボード＋webhook_test を同梱。
+# git＝ソースのみ（ビルド中間物・バイナリ・秘密は除外）。
+
+# === .NET ビルド中間物・成果物（受け手が dotnet build）===
+**/bin/
+**/obj/
+*.exe
+*.dll
+*.pdb
+
+# === Node（将来用）===
+node_modules/
+
+# === Secrets / 個人情報 ===
+*.Local.json
+appsettings.Local.json
+*.pfx
+*.p12
+*.key
+secrets.json
+.env
+.env.local
+
+# === ログ ===
+logs/
+*.log
+
+# === IDE / OS ===
+.vs/
+.vscode/settings.json
+*.suo
+*.user
+Thumbs.db
+.DS_Store
+
+# === Python キャッシュ ===
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# === Git ===
+.git/

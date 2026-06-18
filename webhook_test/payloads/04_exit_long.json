@@ -1,0 +1,27 @@
+{
+  "passphrase": "abcdefg",
+  "alert_name": "TestStrategy",
+  "time": "2026-05-21T10:05:00Z",
+  "exchange": "OSE",
+  "ticker": "OSE:NK225M1!",
+  "interval": "5",
+  "bar": {
+    "time": "2026-05-21T10:05:00Z",
+    "open": 60565,
+    "high": 60820,
+    "low": 60540,
+    "close": 60800,
+    "volume": 580000
+  },
+  "strategy": {
+    "position_size": 0,
+    "order_action": "sell",
+    "order_contracts": 1,
+    "order_price": 60800,
+    "order_id": "test-04-exit-long",
+    "market_position": "flat",
+    "market_position_size": 0,
+    "prev_market_position": "long",
+    "prev_market_position_size": 1
+  }
+}

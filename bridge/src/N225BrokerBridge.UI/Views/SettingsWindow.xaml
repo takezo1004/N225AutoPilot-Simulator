@@ -1,0 +1,174 @@
+<ui:FluentWindow
+    x:Class="N225BrokerBridge.UI.Views.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="設定"
+    Width="640" Height="720"
+    ExtendsContentIntoTitleBar="True"
+    WindowBackdropType="Mica"
+    WindowCornerPreference="Round"
+    WindowStartupLocation="CenterOwner"
+    ShowInTaskbar="False"
+    ResizeMode="NoResize">
+
+    <Window.Resources>
+        <Style x:Key="LabelStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,12,0,4"/>
+        </Style>
+        <Style x:Key="HintStyle" TargetType="TextBlock">
+            <Setter Property="Opacity" Value="0.65"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="設定"/>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20,12,20,20" Margin="0,32,0,0">
+            <StackPanel>
+                <!-- ===== 平文表示トグル ===== -->
+                <ui:ToggleSwitch IsChecked="{Binding ShowPasswordsInClear, Mode=TwoWay}"
+                                  Content="パスワードを表示 (保存前の確認用、ダイアログを閉じるとリセット)"
+                                  HorizontalAlignment="Right"
+                                  Margin="0,0,0,8"/>
+
+                <TextBlock Text="Webhook 受信" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+                <TextBlock Text="パスフレーズ" Style="{StaticResource LabelStyle}"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="0">
+                        <PasswordBox x:Name="PassphraseBox" Tag="{Binding WebhookPassphrase, Mode=TwoWay}"
+                                      PasswordChar="●"
+                                      Visibility="{Binding MaskedVisibility}"/>
+                        <TextBox x:Name="PassphraseTextBox"
+                                 Text="{Binding WebhookPassphrase, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Visibility="{Binding ClearVisibility}"
+                                 FontFamily="Consolas"/>
+                    </Grid>
+                    <ui:Button Grid.Column="1" Content="生成" Margin="6,0,0,0"
+                               Click="OnGeneratePassphraseClicked"
+                               ToolTip="16文字の英数字をランダム生成（保存後、再起動で反映）"/>
+                </Grid>
+                <TextBlock Text="TradingView アラート JSON の passphrase フィールドと一致が必要。空なら認証スキップ (旧互換)。[生成]で16文字を自動作成。"
+                            Style="{StaticResource HintStyle}"/>
+
+                <TextBlock Text="リスニングポート" Style="{StaticResource LabelStyle}"/>
+                <ui:NumberBox Value="{Binding WebhookPort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                               Minimum="1" Maximum="65535" SmallChange="1"
+                               HorizontalAlignment="Left" Width="160" MinWidth="140"/>
+                <TextBlock Text="HttpListener が localhost で待ち受けるポート (1〜65535、デフォルト 8000)。旧 N225OrderBridge も 8000 だが、旧と新は同時稼働しない (kabu Station は 1 接続のみ) ため、旧停止後に新ブリッジが 8000 を引き継ぐ運用。"
+                            Style="{StaticResource HintStyle}"/>
+
+                <Border Margin="0,20,0,12" Background="{DynamicResource ControlElevationBorderBrush}" Height="1"/>
+
+                <TextBlock Text="kabu ステーション" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+                <TextBlock Text="接続環境" Style="{StaticResource LabelStyle}"/>
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton x:Name="EnvProductionRadio"
+                                 GroupName="KabuEnv"
+                                 Content="本番 (port 18080、実発注)"
+                                 IsChecked="{Binding IsProduction, Mode=TwoWay}"
+                                 Margin="0,0,16,0"/>
+                    <RadioButton x:Name="EnvVerificationRadio"
+                                 GroupName="KabuEnv"
+                                 Content="検証 (port 18081、モック応答・発注されない)"
+                                 IsChecked="{Binding IsVerification, Mode=TwoWay}"/>
+                </StackPanel>
+                <TextBlock Text="{Binding ActiveBaseUrlPreview, StringFormat='接続先: {0}'}"
+                            Style="{StaticResource HintStyle}" FontFamily="Consolas"/>
+                <TextBlock Text="検証ポートは kabu Station が常に一定値を返すモック応答。実際の発注は行われないため、旧 N225OrderBridge (本番) と並行運用しても二重発注の心配なし。"
+                            Style="{StaticResource HintStyle}"/>
+
+                <TextBlock Text="API パスワード（本番用）" Style="{StaticResource LabelStyle}"/>
+                <Grid>
+                    <PasswordBox x:Name="KabuApiPasswordBox" Tag="{Binding KabuApiPassword, Mode=TwoWay}"
+                                  PasswordChar="●"
+                                  Visibility="{Binding MaskedVisibility}"/>
+                    <TextBox x:Name="KabuApiPasswordTextBox"
+                             Text="{Binding KabuApiPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Visibility="{Binding ClearVisibility}"
+                             FontFamily="Consolas"/>
+                </Grid>
+                <TextBlock Text="本番ポート (18080) の /token 取得用。kabu Station の「API パスワード（本番用）」と一致させる。"
+                            Style="{StaticResource HintStyle}"/>
+
+                <TextBlock Text="API パスワード（検証用）" Style="{StaticResource LabelStyle}"/>
+                <Grid>
+                    <PasswordBox x:Name="KabuApiPasswordTestBox" Tag="{Binding KabuApiPasswordTest, Mode=TwoWay}"
+                                  PasswordChar="●"
+                                  Visibility="{Binding MaskedVisibility}"/>
+                    <TextBox x:Name="KabuApiPasswordTestTextBox"
+                             Text="{Binding KabuApiPasswordTest, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Visibility="{Binding ClearVisibility}"
+                             FontFamily="Consolas"/>
+                </Grid>
+                <TextBlock Text="検証ポート (18081) の /token 取得用。kabu Station の「API パスワード（検証用）」と一致させる。"
+                            Style="{StaticResource HintStyle}"/>
+
+                <TextBlock Text="取引暗証番号 (取引パスワード)" Style="{StaticResource LabelStyle}"/>
+                <Grid>
+                    <PasswordBox x:Name="KabuOrderPasswordBox" Tag="{Binding KabuOrderPassword, Mode=TwoWay}"
+                                  PasswordChar="●"
+                                  Visibility="{Binding MaskedVisibility}"/>
+                    <TextBox x:Name="KabuOrderPasswordTextBox"
+                             Text="{Binding KabuOrderPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Visibility="{Binding ClearVisibility}"
+                             FontFamily="Consolas"/>
+                </Grid>
+                <TextBlock Text="注文発注 / 取消時に kabu API の Password フィールドへ渡される (本番/検証 共通)。API パスワードとは別物。"
+                            Style="{StaticResource HintStyle}"/>
+
+                <Border Margin="0,20,0,12" Background="{DynamicResource ControlElevationBorderBrush}" Height="1"/>
+
+                <TextBlock Text="動作" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+                <CheckBox Content="手動操作の前に確認ダイアログを表示する（新規・返済・キャンセル）"
+                          IsChecked="{Binding RequireConfirmBeforeOrder, Mode=TwoWay}"
+                          Margin="0,4,0,0"/>
+                <TextBlock Text="ON にすると、ブリッジ UI 上で「買」「売」「返済」「キャンセル」ボタンを押した時にだけ MessageBox で銘柄・数量・サイド・価格を確認してから kabu に発注する。誤発注を防止する保険。バグ収束後は OFF にしてワンクリック発注へ。&#xA;※ TradingView Webhook 経由の自動発注には適用されない（自動発注は常にダイアログなしで即時実行）。"
+                           Style="{StaticResource HintStyle}"/>
+
+                <Border Margin="0,20,0,12" Background="{DynamicResource ControlElevationBorderBrush}" Height="1"/>
+
+                <TextBlock Text="保存先" Style="{StaticResource LabelStyle}"/>
+                <TextBlock Text="{Binding SettingsFilePath}" FontFamily="Consolas" Opacity="0.75"/>
+
+                <TextBlock Text="{Binding StatusMessage}"
+                            Margin="0,16,0,0"
+                            FontWeight="SemiBold"
+                            TextWrapping="Wrap"
+                            Foreground="#5BB964"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Padding="16,12"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <ui:Button Content="閉じる" Appearance="Secondary"
+                            Click="OnCloseClicked"
+                            MinWidth="100" Margin="0,0,8,0"/>
+                <ui:Button Content="保存"
+                            Command="{Binding SaveCommand}"
+                            Appearance="Primary"
+                            MinWidth="100"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

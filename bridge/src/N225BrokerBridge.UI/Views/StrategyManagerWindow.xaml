@@ -1,0 +1,205 @@
+<ui:FluentWindow
+    x:Class="N225BrokerBridge.UI.Views.StrategyManagerWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="戦略管理"
+    Width="900" Height="600"
+    ExtendsContentIntoTitleBar="True"
+    WindowBackdropType="Mica"
+    WindowCornerPreference="Round"
+    WindowStartupLocation="CenterOwner"
+    ShowInTaskbar="False"
+    ResizeMode="CanResize"
+    MinWidth="700" MinHeight="480">
+
+    <Window.Resources>
+        <Style x:Key="LabelStyle" TargetType="TextBlock">
+            <Setter Property="Opacity" Value="0.7"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- メイン画面の DataGrid と同じ強調色 -->
+        <Style x:Key="StrategyRowStyle" TargetType="DataGridRow">
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#2D7CC0"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="BorderBrush" Value="#5AA0E0"/>
+                    <Setter Property="BorderThickness" Value="3,0,0,0"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1A3A5C"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- TitleBar -->
+            <RowDefinition Height="*"/>      <!-- Strategies DataGrid -->
+            <RowDefinition Height="Auto"/>   <!-- 統合編集フォーム (新規/編集兼用) -->
+            <RowDefinition Height="Auto"/>   <!-- フッター (Delete / Status / Close) -->
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="戦略管理"/>
+
+        <!-- 戦略一覧 -->
+        <Border Grid.Row="1" Margin="16,40,16,8"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                CornerRadius="6"
+                Background="{DynamicResource ControlFillColorDefaultBrush}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" Padding="12,8"
+                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                        CornerRadius="6,6,0,0">
+                    <TextBlock Text="登録済み戦略一覧 (行をクリックで選択)"
+                                FontWeight="SemiBold" Opacity="0.85"/>
+                </Border>
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Entries}"
+                          SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
+                          AutoGenerateColumns="False" CanUserAddRows="False"
+                          SelectionMode="Single" SelectionUnit="FullRow"
+                          HeadersVisibility="Column"
+                          IsReadOnly="True"
+                          GridLinesVisibility="Horizontal"
+                          Background="Transparent" BorderThickness="0"
+                          RowHeight="28"
+                          RowStyle="{StaticResource StrategyRowStyle}">
+                    <DataGrid.Columns>
+                        <DataGridCheckBoxColumn Header="有効"
+                                                 Binding="{Binding IsEnabled}"
+                                                 IsReadOnly="True"
+                                                 Width="55"/>
+                        <DataGridTextColumn Header="アラート名"
+                                             Binding="{Binding AlertName}"
+                                             Width="200"/>
+                        <DataGridTextColumn Header="Interval"
+                                             Binding="{Binding Interval, StringFormat='{}{0}m'}"
+                                             Width="80" MinWidth="60"/>
+                        <DataGridTextColumn Header="説明"
+                                             Binding="{Binding Description}"
+                                             Width="*"/>
+                        <DataGridTextColumn Header="最終受信"
+                                             Binding="{Binding LastSignalAt, StringFormat='{}{0:MM/dd HH:mm:ss}'}"
+                                             Width="120"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <!-- ===== 統合編集フォーム (新規追加 / 編集 兼用) ===== -->
+        <Border Grid.Row="2" Margin="16,4,16,4"
+                Padding="16,12"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                CornerRadius="6"
+                Background="{DynamicResource ControlFillColorDefaultBrush}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>   <!-- ステータスラベル + 4 ボタン -->
+                    <RowDefinition Height="Auto"/>   <!-- フィールド 1 行 -->
+                </Grid.RowDefinitions>
+
+                <!-- 1 行目: モード表示 + 新規/編集/更新/キャンセル ボタン -->
+                <TextBlock Grid.Row="0"
+                            Text="{Binding EditModeLabel}"
+                            FontWeight="SemiBold"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Margin="0,0,0,10"/>
+                <StackPanel Grid.Row="0" Orientation="Horizontal"
+                            HorizontalAlignment="Right" Margin="0,0,0,10">
+                    <ui:Button Content="追　加"
+                                Click="OnCommitIntervalBeforeCommand"
+                                Command="{Binding AddCommand}"
+                                Appearance="Primary" MinWidth="80" Margin="0,0,6,0"/>
+                    <ui:Button Content="編　集"
+                                Command="{Binding EditCommand}"
+                                Appearance="Secondary" MinWidth="80" Margin="0,0,6,0"/>
+                    <ui:Button Content="更　新"
+                                Click="OnCommitIntervalBeforeCommand"
+                                Command="{Binding UpdateCommand}"
+                                Appearance="Primary" MinWidth="80" Margin="0,0,6,0"/>
+                    <ui:Button Content="キャンセル"
+                                Command="{Binding CancelCommand}"
+                                Appearance="Secondary" MinWidth="80"/>
+                </StackPanel>
+
+                <!-- 2 行目: 編集フィールド (IsEditing で活性化) -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>   <!-- 有効 -->
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="200"/>   <!-- アラート名 -->
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="120"/>   <!-- Interval -->
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>     <!-- 説明 -->
+                    </Grid.ColumnDefinitions>
+
+                    <CheckBox Grid.Column="0"
+                                Content="有効"
+                                IsChecked="{Binding EditingIsEnabled, Mode=TwoWay}"
+                                VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Column="2" Text="アラート名:" Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Column="3"
+                              Text="{Binding EditingAlertName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              Padding="6,4"
+                              VerticalContentAlignment="Center"/>
+
+                    <TextBlock Grid.Column="5" Text="Interval (分):" Style="{StaticResource LabelStyle}"/>
+                    <ui:NumberBox Grid.Column="6"
+                                   x:Name="IntervalNumberBox"
+                                   Value="{Binding EditingInterval, Mode=TwoWay}"
+                                   Minimum="1" Maximum="1440" SmallChange="1"
+                                   HorizontalAlignment="Stretch"/>
+
+                    <TextBlock Grid.Column="8" Text="説明:" Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Column="9"
+                              Text="{Binding EditingDescription, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              Padding="6,4"
+                              VerticalContentAlignment="Center"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- フッター: 削除 + ステータス + 閉じる -->
+        <Border Grid.Row="3" Padding="16,12"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <ui:Button Grid.Column="0" Content="選択行を削除"
+                            Command="{Binding DeleteCommand}"
+                            Appearance="Danger" MinWidth="120"/>
+
+                <TextBlock Grid.Column="1" Text="{Binding StatusMessage}"
+                            VerticalAlignment="Center" Margin="16,0"
+                            FontWeight="SemiBold" Opacity="0.85"
+                            TextTrimming="CharacterEllipsis"/>
+
+                <ui:Button Grid.Column="2" Content="閉じる"
+                            Click="OnCloseClicked"
+                            Appearance="Secondary" MinWidth="100"/>
+            </Grid>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

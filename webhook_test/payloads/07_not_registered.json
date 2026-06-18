@@ -1,0 +1,27 @@
+{
+  "passphrase": "abcdefg",
+  "alert_name": "UnknownStrategy_NotRegistered",
+  "time": "2026-05-21T10:20:00Z",
+  "exchange": "OSE",
+  "ticker": "OSE:NK225M1!",
+  "interval": "5",
+  "bar": {
+    "time": "2026-05-21T10:20:00Z",
+    "open": 60580,
+    "high": 60620,
+    "low": 60530,
+    "close": 60560,
+    "volume": 510000
+  },
+  "strategy": {
+    "position_size": 1,
+    "order_action": "buy",
+    "order_contracts": 1,
+    "order_price": 60500,
+    "order_id": "test-07-notregistered",
+    "market_position": "long",
+    "market_position_size": 1,
+    "prev_market_position": "flat",
+    "prev_market_position_size": 0
+  }
+}

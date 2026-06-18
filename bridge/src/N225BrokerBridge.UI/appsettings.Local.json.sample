@@ -1,0 +1,9 @@
+{
+  "Webhook": {
+    "Passphrase": "your-tradingview-webhook-passphrase"
+  },
+  "Kabu": {
+    "ApiPassword": "your-kabu-api-password",
+    "OrderPassword": "your-kabu-trading-password"
+  }
+}

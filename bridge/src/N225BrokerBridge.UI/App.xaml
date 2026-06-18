@@ -1,0 +1,17 @@
+<Application
+    x:Class="N225BrokerBridge.UI.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:srv="clr-namespace:N225BrokerBridge.UI.Services">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ui:ThemesDictionary Theme="Dark"/>
+                <ui:ControlsDictionary/>
+            </ResourceDictionary.MergedDictionaries>
+            <srv:OrderTypeChoiceConverter x:Key="OrderTypeChoiceConv"/>
+            <srv:GroupAggregateConverter x:Key="GroupAgg"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

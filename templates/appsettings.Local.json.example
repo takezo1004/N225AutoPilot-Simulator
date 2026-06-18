@@ -1,0 +1,22 @@
+{
+  "_comment": "N225BrokerBridge 利用者個別設定ファイルのテンプレ。本ファイルを %LOCALAPPDATA%\\N225BrokerBridge\\appsettings.Local.json にコピーし、各値を埋めてから DPAPI 暗号化を行う。詳細は /setup を参照。",
+
+  "Webhook": {
+    "Port": 8001,
+    "Passphrase": "ここに Webhook 認証用パスフレーズ。DPAPI 暗号化前は平文。/setup 実行時に enc: プレフィックス付きの暗号化文字列に置換される。"
+  },
+
+  "Kabu": {
+    "Mode": "Production",
+    "ProductionPassword": "kabu API パスワード (本番ポート 18080 用)。DPAPI 暗号化必須。",
+    "VerificationPassword": "kabu API パスワード (検証ポート 18081 用)。本番口座への発注を回避してテストする時に使う。",
+    "OrderPassword": "kabu 取引暗証番号 (発注のたびに body 同梱)。DPAPI 暗号化必須。"
+  },
+
+  "Behavior": {
+    "RequireConfirmBeforeOrder": true,
+    "_comment_RequireConfirmBeforeOrder": "手動発注ボタンを押した時に確認ダイアログを出すか。デフォルト true (安全側)。バグ収束後に false にしてワンクリック発注に切替可能。"
+  },
+
+  "_simulator_note": "--simulator 起動時は本ファイルではなく appsettings.Local.simulator.json を読みに行く。シミュレータ用の設定は別ファイルで管理されるため、本番設定とは独立する。詳細は bridge/docs/simulator-mode.md §9-3。"
+}
