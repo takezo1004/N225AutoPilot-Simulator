@@ -17,7 +17,7 @@
 
 ## 必要なもの
 - Windows 10（1809+）/ 11（x64）
-- **.NET 8 SDK**（ブリッジをビルドするため）
+- **.NET 8**：`setup.exe` で導入するなら **.NET 8 Desktop Runtime**／ソースからビルドするなら **.NET 8 SDK**
 - **Python 3.10+**（テストダッシュボード。標準ライブラリのみ使用）
 - ※ kabu / TradingView / Cloudflare / 独自ドメインは**不要**
 
@@ -25,12 +25,16 @@
 
 ## 基本ルートの手順
 
-### 1. ブリッジをビルド
-```powershell
-cd bridge
-dotnet build -c Debug
-```
-`bridge/src/N225BrokerBridge.UI/bin/Debug/net8.0-windows/N225BrokerBridge.UI.exe` が出来ます（ダッシュボードが自動検出）。
+### 1. ブリッジを用意（いずれか）
+- **推奨**：`setup.exe` を実行して導入（GitHub Release から取得・「あれば入れない」）。
+- **代替（ソースからビルド）**：
+  ```powershell
+  cd bridge
+  dotnet build src\N225BrokerBridge.UI -c Debug
+  ```
+  `bridge/src/N225BrokerBridge.UI/bin/Debug/net8.0-windows/N225BrokerBridge.UI.exe` が出来ます。
+
+ダッシュボードが導入済み／ビルド済みの exe を自動検出します。
 
 ### 2. テストダッシュボードを起動
 ルートの **`起動_シミュレーション.bat`** をダブルクリック。
@@ -55,12 +59,12 @@ dotnet build -c Debug
 ## 同梱物
 | 場所 | 中身 |
 |---|---|
-| `bridge/` | N225 AutoPilot ブリッジ一式（**ソース**・受け手が build） |
+| `bridge/` | N225 AutoPilot ブリッジ（**ソースのみ**・setup.exe は GitHub Release 添付） |
 | `n225_simulator_test_dashboard.py` ＋ `起動_シミュレーション.bat` | テストダッシュボード（Python・stdlib のみ） |
 | `webhook_test/` | 7種のペイロード＋手順（`payloads/`・`STEP_BY_STEP.md`・`test_all.ps1`） |
 | `templates/` | 設定例（`appsettings.Local.json.example`） |
 | `VERSION.json` | 版（sim_runtime / bridge / webhook-spec） |
-| `CLAUDE.md`・`.claude/` | 保険ルート（Claude Code 命令書・skills） |
+| `CLAUDE.md`・`.claude/` | 保険ルート（Claude Code 命令書 `/install`・`/verify`・`/diagnose`） |
 
 > ⚠️ **ドラフト v0.4.0（2026-06-18・案A 自己完結へ刷新）。テスター環境での動作確認が必要です。**
 > 旧 v0.3.0 の「3リポ構造（public bridge を別 clone）」前提は**案A（bridge 同梱の自己完結）**に置換しました。

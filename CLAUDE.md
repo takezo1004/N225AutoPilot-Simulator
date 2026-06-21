@@ -14,7 +14,7 @@
 ```
 [テストダッシュボード] ──webhook(8000)──> [N225 AutoPilot ブリッジ --simulator（MockBroker）]
 ```
-- ブリッジ（`bridge/`・C#/.NET・受け手が build）。テストダッシュボード（Python・stdlib のみ）が `--simulator` 起動＋7種ペイロード発火。
+- ブリッジ（`bridge/`・C#/.NET・**ソース同梱／setup.exe は Release**）。テストダッシュボード（Python・stdlib のみ）が `--simulator` 起動＋7種ペイロード発火。
 
 ---
 
@@ -30,7 +30,7 @@
 ## 2. スラッシュコマンド
 | コマンド | 用途 |
 |---|---|
-| `/install` | 環境構築（.NET 8 SDK 確認 → `bridge/` を build → Python 確認） |
+| `/install` | 環境構築（ブリッジを用意：**setup.exe で導入**／または `dotnet build src\N225BrokerBridge.UI -c Debug` でビルド → Python 確認） |
 | `/verify` | 動作確認（`--simulator` 起動 → テスト POST → レスポンス確認） |
 | `/diagnose` | トラブル診断（プロセス／ポート8000／ログ） |
 
@@ -39,7 +39,7 @@
 ---
 
 ## 3. 構成・ポート
-- ブリッジ build 出力＝`bridge/src/N225BrokerBridge.UI/bin/Debug/net8.0-windows/N225BrokerBridge.UI.exe`（ダッシュボードが自動検出）。
+- ブリッジ実体＝setup.exe 導入先、または build 出力 `bridge/src/N225BrokerBridge.UI/bin/Debug/net8.0-windows/N225BrokerBridge.UI.exe`（ダッシュボードが自動検出）。
 - シミュレータ設定＝`%LOCALAPPDATA%\N225BrokerBridge\*.simulator.json`（本番 `*.Local.json` とは別）。
 - ポート＝**8000**（simulator webhook）。passphrase＝`abcdefg`、戦略＝`TestStrategy`（自動投入）。
 

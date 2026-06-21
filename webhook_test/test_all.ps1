@@ -1,21 +1,19 @@
-# N225BrokerBridge Webhook テスト一括スクリプト (Stage 1)
+# N225BrokerBridge Webhook テスト一括スクリプト (シミュレーション・offline)
 #
-# 前提:
-#   1. 新ブリッジ (N225BrokerBridge.UI.exe) が起動済み
-#   2. 設定ダイアログで Webhook パスフレーズ = "abcdefg" (TV 実テンプレと同じ) 保存済み (再起動必須)
-#   3. StrategyRegistry に TestStrategy + interval=5 + IsEnabled=true 登録済み
-#   4. kabu Station 起動済み (実弾発注テストのケース 3〜5)
+# 前提（ダッシュボードの 7ボタンと同等の代替手段。kabu/TV/Cloudflare 不要）:
+#   1. ブリッジが --simulator（MockBroker）で起動済み（起動_シミュレーション.bat でダッシュボードが自動起動）
+#   2. passphrase = "abcdefg"、戦略 TestStrategy(interval=5,有効) は起動時に自動投入される
 #
 # 使い方:
 #   pwsh -File test_all.ps1                    # ケース 1, 2, 6, 7 (発注なし) を実行
-#   pwsh -File test_all.ps1 -IncludeOrder      # ケース 3, 4, 5 (発注あり) も実行
+#   pwsh -File test_all.ps1 -IncludeOrder      # ケース 3, 4, 5 (MockBroker・実弾なし) も実行
 #
 # 期待レスポンス (200 + 本文):
 #   1. Authenticated_Failed
 #   2. (400 Bad Request)
-#   3. NewOrderDispatched_     ← kabu に新規買い 1 枚 (実弾)
-#   4. ExitOrderDispatched_    ← 建玉なしならエラー、建玉あれば返済
-#   5. DotenDispatched_        ← 建玉なしならエラー、short あれば反転
+#   3. NewOrderDispatched_     ← MockBroker がモック応答（実弾なし）
+#   4. ExitOrderDispatched_    ← 建玉なしならエラー、建玉あれば返済（モック）
+#   5. DotenDispatched_        ← 建玉なしならエラー、short あれば反転（モック）
 #   6. Ignored_
 #   7. Ignored_  (戦略未登録)
 
@@ -97,7 +95,7 @@ Send-WebhookCase -Name "7. 戦略未登録 (Ignored)" `
 
 if ($IncludeOrder) {
     Write-Host ""
-    Write-Host "===== 実弾発注ケース (kabu に発注されます) =====" -ForegroundColor Magenta
+    Write-Host "===== 発注ケース (MockBroker・実弾なし) =====" -ForegroundColor Magenta
 
     # 3. 新規買い
     Send-WebhookCase -Name "3. 新規買い (flat→long)" `
