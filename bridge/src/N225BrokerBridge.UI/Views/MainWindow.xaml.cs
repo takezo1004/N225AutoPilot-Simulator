@@ -27,7 +27,7 @@ public partial class MainWindow : FluentWindow
         if (App.IsSimulatorMode)
         {
             SimulatorBadge.Visibility = Visibility.Visible;
-            Title = "N225 AutoPilot — SIMULATOR";
+            Title = "N225AutoTrader Bridge — SIMULATOR";
         }
 
         // 最大化/復元アイコンを WindowState に応じて切替 (Windows 標準動作)
@@ -73,7 +73,7 @@ public partial class MainWindow : FluentWindow
     private void OnAboutMenuClick(object sender, RoutedEventArgs e)
     {
         System.Windows.MessageBox.Show(
-            "N225 AutoPilot\n\nバージョン: 0.1.0 (開発中)\n旧 N225 Broker Bridge / N225OrderBridge の DDD 流儀での再構築",
+            "N225AutoTrader Bridge\n\nバージョン: 0.1.0 (開発中)\n旧 N225 Broker Bridge / N225OrderBridge の DDD 流儀での再構築",
             "バージョン情報",
             System.Windows.MessageBoxButton.OK,
             System.Windows.MessageBoxImage.Information);

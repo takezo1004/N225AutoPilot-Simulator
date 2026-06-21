@@ -1,9 +1,9 @@
-# N225 AutoPilot — シミュレーション（製品1・無料サンプル）
+# N225AutoTrader — シミュレーション（製品1・無料サンプル）
 
-ブリッジ（N225 AutoPilot）を **`--simulator`（MockBroker・外部非接続）** で動かし、Webhook 受信 → 発注 → 約定 → 建玉計上の流れを**テストダッシュボードのボタン7種**で体験する無料サンプルです。**kabu / TradingView / Cloudflare / ネット接続は一切不要**。
+ブリッジ（N225AutoTrader）を **`--simulator`（MockBroker・外部非接続）** で動かし、Webhook 受信 → 発注 → 約定 → 建玉計上の流れを**テストダッシュボードのボタン7種**で体験する無料サンプルです。**kabu / TradingView / Cloudflare / ネット接続は一切不要**。
 
 ```
-[テストダッシュボード] ──webhook(8000)──> [N225 AutoPilot ブリッジ --simulator（MockBroker）]
+[テストダッシュボード] ──webhook(8000)──> [N225AutoTrader ブリッジ --simulator（MockBroker）]
    7種のペイロードをボタンで発火 → レスポンス／ログを画面で確認
 ```
 
@@ -59,7 +59,7 @@
 ## 同梱物
 | 場所 | 中身 |
 |---|---|
-| `bridge/` | N225 AutoPilot ブリッジ（**ソースのみ**・setup.exe は GitHub Release 添付） |
+| `bridge/` | N225AutoTrader ブリッジ（**ソースのみ**・setup.exe は GitHub Release 添付） |
 | `n225_simulator_test_dashboard.py` ＋ `起動_シミュレーション.bat` | テストダッシュボード（Python・stdlib のみ） |
 | `webhook_test/` | 7種のペイロード＋手順（`payloads/`・`STEP_BY_STEP.md`・`test_all.ps1`） |
 | `templates/` | 設定例（`appsettings.Local.json.example`） |

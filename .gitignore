@@ -1,4 +1,4 @@
-# N225AutoPilot-Simulator（製品1・無料サンプル・Public）用 .gitignore
+# N225AutoTrader-Simulator（製品1・無料サンプル・Public）用 .gitignore
 #
 # 案A：bridge ソース＋テストダッシュボード＋webhook_test を同梱。
 # git＝ソースのみ（ビルド中間物・バイナリ・秘密は除外）。

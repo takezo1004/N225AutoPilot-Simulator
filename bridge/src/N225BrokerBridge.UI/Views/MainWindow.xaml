@@ -7,7 +7,7 @@
     xmlns:srv="clr-namespace:N225BrokerBridge.UI.Services"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-    Title="N225 AutoPilot"
+    Title="N225AutoTrader Bridge"
     Width="1280" Height="820"
     MinWidth="1024" MinHeight="600"
     WindowStyle="None"
@@ -266,7 +266,7 @@
                     <TextBlock Text="SIMULATOR" Foreground="#1A1A1A"
                                FontFamily="Cascadia Code" FontWeight="Bold" FontSize="11"/>
                 </Border>
-                <TextBlock Text="N225 AutoPilot"
+                <TextBlock Text="N225AutoTrader Bridge"
                            Foreground="White"
                            FontFamily="Cascadia Code"
                            FontWeight="SemiBold"

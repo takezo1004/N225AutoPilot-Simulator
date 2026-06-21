@@ -1,4 +1,4 @@
-# N225 AutoPilot シミュレーション（製品1・無料サンプル）— 購読者の Claude Code 用ガイド（保険ルート）
+# N225AutoTrader シミュレーション（製品1・無料サンプル）— 購読者の Claude Code 用ガイド（保険ルート）
 
 > ⚠️ **ドラフト v0.4.0（2026-06-18・案A 自己完結へ刷新）。テスター環境での動作確認が必要です。**
 >
@@ -12,7 +12,7 @@
 ## 0. このサンプルの全体像
 ブリッジを `--simulator`（MockBroker・外部非接続）で動かし、Webhook の挙動を体験します。**kabu / TradingView / Cloudflare 不要**。
 ```
-[テストダッシュボード] ──webhook(8000)──> [N225 AutoPilot ブリッジ --simulator（MockBroker）]
+[テストダッシュボード] ──webhook(8000)──> [N225AutoTrader ブリッジ --simulator（MockBroker）]
 ```
 - ブリッジ（`bridge/`・C#/.NET・**ソース同梱／setup.exe は Release**）。テストダッシュボード（Python・stdlib のみ）が `--simulator` 起動＋7種ペイロード発火。
 

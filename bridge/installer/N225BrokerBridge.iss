@@ -7,7 +7,7 @@
 ;  あるいは: installer/build.ps1 を実行
 ; ============================================================
 
-#define MyAppName       "N225 AutoPilot"
+#define MyAppName       "N225AutoTrader Bridge"
 #define MyAppVersion    "0.1.0"
 #define MyAppPublisher  "Takao"
 #define MyAppURL        ""
