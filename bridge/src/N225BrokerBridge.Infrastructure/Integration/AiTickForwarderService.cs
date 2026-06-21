@@ -18,15 +18,20 @@ namespace N225BrokerBridge.Infrastructure.Integration;
 /// 既存ロジックは一切変更しない純粋な追加。price stream (IPriceUpdateNotifier) を購読して送るだけ。
 /// AI 側 (TCP サーバ) が未起動でも握りつぶして 3 秒ごとに再接続を試みる。
 ///
-/// ※ volume は現状 0 (board push DTO に出来高未抽出)。15分足の価格パイプライン実証が目的。
-///   出来高の正式対応は feed 整合フェーズ (TradingVolume 抽出) で行う。
+/// データ基準＝日経225ミニのみ転送 (倍率 100 = Mini で識別・Micro=10 等は捨てる)。
+///   ミニ/マイクロのティック混在を防ぎ、受信側 (LocalEngine) が常にミニ1本で足を生成できるようにする。
+/// volume は kabu の当日累積売買高 (TradingVolume) を「売買高時刻 (TradingVolumeTime) が進んだ時だけ」
+///   増分として数え、その売買高時刻のバーに入るよう timestamp も売買高時刻にする
+///   (受信側 OHLCManager は per-bar で += するだけ・無変更)。初回/セッションリセットは 0。
 /// </summary>
 public sealed class AiTickForwarderService : IHostedService, IDisposable
 {
     private const string Host = "127.0.0.1";
     private const int Port = 5000;
+    private const int MiniMultiplier = 100;   // 日経225ミニの ProfitMultiplier (= データ基準銘柄の識別子)
 
     private readonly IPriceUpdateNotifier _notifier;
+    private readonly IContractMultiplierResolver _multipliers;
     private readonly ILogger<AiTickForwarderService> _logger;
 
     private readonly object _gate = new();
@@ -34,10 +39,16 @@ public sealed class AiTickForwarderService : IHostedService, IDisposable
     private NetworkStream? _stream;
     private volatile bool _connected;
     private CancellationTokenSource? _cts;
+    private decimal _prevCumVolume = -1m;                  // 直前のミニ当日累積売買高
+    private DateTime _prevVolumeAt = DateTime.MinValue;    // 直前の売買高時刻 (進行時のみ出来高計上)
 
-    public AiTickForwarderService(IPriceUpdateNotifier notifier, ILogger<AiTickForwarderService> logger)
+    public AiTickForwarderService(
+        IPriceUpdateNotifier notifier,
+        IContractMultiplierResolver multipliers,
+        ILogger<AiTickForwarderService> logger)
     {
         _notifier = notifier;
+        _multipliers = multipliers;
         _logger = logger;
     }
 
@@ -81,12 +92,32 @@ public sealed class AiTickForwarderService : IHostedService, IDisposable
     private void OnPriceUpdated(object? sender, PriceTick tick)
     {
         if (!_connected) return;
+
+        // データ基準＝日経225ミニのみ転送 (倍率 100)。Micro(10)・未登録(=銘柄解決前)は捨てる。
+        // → ミニ/マイクロのティック混在を防ぎ、受信側の足を常にミニ1本に保つ。
+        if (_multipliers.Resolve(tick.Symbol.Value) != MiniMultiplier) return;
+
+        // 出来高: 売買高時刻 (TradingVolumeTime) が進んだ時だけ当日累積の増分を計上する。
+        //   累積をそのまま足すと桁違い／毎 tick 差分は境界跨ぎで誤計上 → 売買高時刻基準が正しい。
+        var cum = tick.Volume;
+        var vAt = tick.VolumeAt;                          // UTC (未提供は MinValue)
+        decimal volInc = 0m;
+        if (_prevVolumeAt == DateTime.MinValue)
+        {
+            _prevVolumeAt = vAt; _prevCumVolume = cum;    // 初回はベースライン化 (計上しない)
+        }
+        else if (vAt > _prevVolumeAt)
+        {
+            if (cum >= _prevCumVolume) volInc = cum - _prevCumVolume;  // 正常増分 (cum<prev はセッションリセット→0)
+            _prevVolumeAt = vAt; _prevCumVolume = cum;
+        }
+
         try
         {
-            // tick.At は UTC。JST(+9h) のウォール時刻で送る (AI は %Y/%m/%d %H:%M:%S で解釈)。
-            var jst = tick.At.AddHours(9);
+            // 出来高があれば売買高時刻のバーへ・無ければ現値時刻 (価格更新のみ)。UTC→JST(+9h)。
+            var jst = (volInc > 0m ? vAt : tick.At).AddHours(9);
             var line = FormattableString.Invariant(
-                $"{{\"timestamp\":\"{jst:yyyy/MM/dd HH:mm:ss}\",\"close\":{tick.LastPrice.Value},\"volume\":0}}\n");
+                $"{{\"timestamp\":\"{jst:yyyy/MM/dd HH:mm:ss}\",\"close\":{tick.LastPrice.Value},\"volume\":{(long)volInc}}}\n");
             var bytes = Encoding.UTF8.GetBytes(line);
             lock (_gate)
             {

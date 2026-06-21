@@ -15,11 +15,15 @@ namespace N225BrokerBridge.Domain.Brokers;
 /// <param name="LastPrice">最終約定価格。</param>
 /// <param name="BidPrice">kabu の BidPrice (= 通常 ASK)。</param>
 /// <param name="AskPrice">kabu の AskPrice (= 通常 BID)。</param>
-/// <param name="At">ティックのタイムスタンプ。</param>
+/// <param name="At">ティックのタイムスタンプ (現値時刻 CurrentPriceTime, UTC)。</param>
+/// <param name="Volume">kabu の当日累積売買高 (TradingVolume)。未提供は 0。転送側が売買高時刻の進行で per-bar 増分に変換する。</param>
+/// <param name="VolumeAt">売買高時刻 (TradingVolumeTime, UTC)。未提供は MinValue。これが進んだ時だけ出来高が増えたとみなす。</param>
 public sealed record PriceTick(
     BrokerCode BrokerCode,
     SymbolCode Symbol,
     Price LastPrice,
     Price BidPrice,
     Price AskPrice,
-    DateTime At);
+    DateTime At,
+    decimal Volume = 0m,
+    DateTime VolumeAt = default);

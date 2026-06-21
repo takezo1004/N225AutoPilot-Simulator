@@ -129,7 +129,9 @@ public sealed class KabuBoardWebSocketService : IHostedService, IPriceUpdateNoti
                     LastPrice: new Price(SafeDecimal(board.CurrentPrice)),
                     BidPrice: new Price(SafeDecimal(board.BidPrice)),
                     AskPrice: new Price(SafeDecimal(board.AskPrice)),
-                    At: ParseTime(board.CurrentPriceTime));
+                    At: ParseTime(board.CurrentPriceTime),
+                    Volume: board.TradingVolume > 0 ? (decimal)board.TradingVolume : 0m,
+                    VolumeAt: ParseVolumeTime(board.TradingVolumeTime));
 
                 _adapter.PushPriceTick(tick);
                 _logger.LogDebug(
@@ -160,6 +162,13 @@ public sealed class KabuBoardWebSocketService : IHostedService, IPriceUpdateNoti
         return DateTime.UtcNow;
     }
 
+    // 売買高時刻。未提供/解析不能は MinValue (= 進行なし = 出来高を計上しない安全側)。
+    private static DateTime ParseVolumeTime(string? raw)
+    {
+        if (!string.IsNullOrWhiteSpace(raw) && DateTime.TryParse(raw, out var dt)) return dt.ToUniversalTime();
+        return DateTime.MinValue;
+    }
+
     public void Dispose()
     {
         _cts?.Cancel();
@@ -177,4 +186,6 @@ internal sealed class KabuBoardPushDto
     [JsonPropertyName("CurrentPriceTime")] public string? CurrentPriceTime { get; set; }
     [JsonPropertyName("BidPrice")] public double BidPrice { get; set; }
     [JsonPropertyName("AskPrice")] public double AskPrice { get; set; }
+    [JsonPropertyName("TradingVolume")] public double TradingVolume { get; set; }       // 当日累積売買高
+    [JsonPropertyName("TradingVolumeTime")] public string? TradingVolumeTime { get; set; } // 売買高時刻
 }
