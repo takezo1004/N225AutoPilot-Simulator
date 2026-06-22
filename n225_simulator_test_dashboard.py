@@ -84,7 +84,7 @@ def _resolve_payload_dir() -> Path:
 DEFAULT_BRIDGE_EXE = _resolve_bridge_exe()
 DEFAULT_PAYLOAD_DIR = _resolve_payload_dir()
 
-LOCAL_APP_DATA = Path(os.environ.get("LOCALAPPDATA", r"C:\Users\takao2\AppData\Local"))
+LOCAL_APP_DATA = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local"))
 SIMULATOR_DIR = LOCAL_APP_DATA / "N225BrokerBridge"
 SIMULATOR_SETTINGS = SIMULATOR_DIR / "appsettings.Local.simulator.json"
 SIMULATOR_STRATEGIES = SIMULATOR_DIR / "strategies.simulator.json"
