@@ -125,10 +125,16 @@ public sealed class KabuAdapter : IBrokerAdapter, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<PositionSnapshot>> GetPositionsAsync(CancellationToken ct = default)
+    public async Task<BrokerPositionsResult> GetPositionsAsync(CancellationToken ct = default)
     {
-        var raw = await _client.GetPositionsAsync(ct);
-        return raw.Select(d => KabuMappers.ToPositionSnapshot(d, BrokerCode)).ToList();
+        var resp = await _client.GetPositionsAsync(ct);
+        if (!resp.IsAvailable)
+            return BrokerPositionsResult.Unavailable();
+
+        var snapshots = resp.Positions
+            .Select(d => KabuMappers.ToPositionSnapshot(d, BrokerCode))
+            .ToList();
+        return BrokerPositionsResult.Available(snapshots);
     }
 
     /// <inheritdoc/>

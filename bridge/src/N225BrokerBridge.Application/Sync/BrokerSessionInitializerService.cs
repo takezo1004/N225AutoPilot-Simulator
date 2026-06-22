@@ -69,7 +69,7 @@ public sealed class BrokerSessionInitializerService : IHostedService
             // ダミーの API 呼び出し (GetPositionsAsync) で token 取得をトリガーする。
             // これにより token 取得ログが出る。
             _logger.LogInformation("Step 1: kabu API トークン取得 (warm up)...");
-            await _broker.GetPositionsAsync(ct);
+            _ = await _broker.GetPositionsAsync(ct);
             _logger.LogInformation("Step 1: 完了。");
         }
         catch (Exception ex)
@@ -100,7 +100,24 @@ public sealed class BrokerSessionInitializerService : IHostedService
         {
             _logger.LogInformation("Step 3: 建玉一覧初期取得 + 整合チェック (kabu /positions と自動取引メタを突合) ...");
 
-            var brokerPositions = await _broker.GetPositionsAsync(ct);
+            var result = await _broker.GetPositionsAsync(ct);
+
+            // ★ガード: kabu /positions が確定的に読めなかった (未認証・セッション外・メンテ窓・通信エラー)
+            // ときは、空応答を「建玉ゼロ」と取り違えて建玉を初期化しない。既存建玉・自動取引メタを
+            // そのまま保持して抜ける (SyncToActiveSetAsync の prune も行わない)。
+            // kabu 接続回復後に定期リコンサイル (PositionReconciliationService) が追従する。
+            // 2026-06-23: メンテ窓に再起動すると Step 3 の SyncToActiveSet([]) で建玉メタを
+            //             全消ししてしまう穴があったため、ここでガードする。
+            if (!result.IsAvailable)
+            {
+                _logger.LogWarning(
+                    "Step 3: kabu /positions が照会不能 (未認証・セッション外・メンテ窓の可能性)。"
+                    + "建玉初期化をスキップし、既存建玉・自動取引メタを保持します。"
+                    + "kabu 接続回復後に定期リコンサイルが追従します。");
+                return;
+            }
+
+            var brokerPositions = result.Positions;
             var autoMetadata = await _autoStore.LoadAllAsync(ct);
             var metadataByExecId = autoMetadata.ToDictionary(m => m.ExecutionId, StringComparer.Ordinal);
 

@@ -204,7 +204,7 @@ public sealed class MockBrokerAdapter
     }
 
     /// <inheritdoc/>
-    public Task<IReadOnlyList<PositionSnapshot>> GetPositionsAsync(CancellationToken ct = default)
+    public Task<BrokerPositionsResult> GetPositionsAsync(CancellationToken ct = default)
     {
         lock (_stateLock)
         {
@@ -220,7 +220,8 @@ public sealed class MockBrokerAdapter
                     EntryPrice: p.EntryPrice,
                     OpenedAt: p.OpenedAt))
                 .ToList();
-            return Task.FromResult(list);
+            // モックは常に確定的に読める (in-memory)。
+            return Task.FromResult(BrokerPositionsResult.Available(list));
         }
     }
 

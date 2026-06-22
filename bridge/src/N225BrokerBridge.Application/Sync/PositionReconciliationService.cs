@@ -100,10 +100,24 @@ public sealed class PositionReconciliationService : BackgroundService
     }
 
     /// <summary>1 ティック分のリコンサイル。kabu /positions を取得しブリッジ建玉をミラーに寄せる。</summary>
-    private async Task ReconcileOnceAsync(CancellationToken ct)
+    internal async Task ReconcileOnceAsync(CancellationToken ct)
     {
-        var brokerPositions = await _broker.GetPositionsAsync(ct);
-        var kabuActive = brokerPositions.Where(p => !p.LeaveQuantity.IsZero).ToList();
+        var result = await _broker.GetPositionsAsync(ct);
+
+        // ★最重要ガード: kabu /positions が確定的に読めなかった (未認証・夜間セッション切替・
+        // メンテ窓・トークン失効・通信エラー) ときは、空応答を「建玉ゼロ」と取り違えて
+        // 生きた建玉を除去しないため、このティックは一切手を付けずに抜ける。
+        // 連続不在/存在カウンタも触らない (読めたティックだけで確定を進める)。
+        // 2026-06-23: ここを欠いていたため、夜間セッション引け直後の空応答で
+        //             約定済み自動建玉・手動建玉を一括除去する実害が出た。
+        if (!result.IsAvailable)
+        {
+            _logger.LogDebug(
+                "建玉リコンサイル: kabu /positions が照会不能のためこのティックはスキップ (建玉・カウンタは保持)。");
+            return;
+        }
+
+        var kabuActive = result.Positions.Where(p => !p.LeaveQuantity.IsZero).ToList();
         var kabuIds = new HashSet<string>(kabuActive.Select(s => s.PositionId.Value), StringComparer.Ordinal);
 
         var existing = await _positionRepo.FindActiveAsync(ct);

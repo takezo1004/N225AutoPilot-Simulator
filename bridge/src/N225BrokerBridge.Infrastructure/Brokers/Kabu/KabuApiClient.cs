@@ -122,39 +122,75 @@ public sealed class KabuApiClient
     /// 定期リコンサイルで頻繁に呼ばれるため、応答ログは Debug レベルに留める
     /// (UI ログタブを埋め尽くさないため。診断時はログレベルを Debug に下げれば見られる)。
     /// </summary>
-    public async Task<IReadOnlyList<KabuPositionDto>> GetPositionsAsync(CancellationToken ct = default)
+    /// <summary>
+    /// 建玉一覧 /positions?product=... を「照会できたか (IsAvailable)」付きで取得する。
+    ///
+    /// kabu は未認証・夜間セッション切替・メンテ窓・トークン失効時に、建玉配列でなく
+    /// 空応答・エラーエンベロープ ({"Code":...,"Message":...}) を返す。これらを「建玉ゼロ」と
+    /// 取り違えるとリコンサイルで生きた建玉を全消ししてしまう (2026-06-23 実害)。そのため
+    /// 「読めなかった」全ケース (HTTP 非 2xx・空ボディ・非配列エンベロープ・JSON 解析不能・
+    /// 通信/トークン例外) は <see cref="KabuPositionsResponse.Unavailable"/> を返し、
+    /// <b>建玉配列が確定的に読めたときだけ</b> Available を返す (0 件も確定的なゼロとして Available)。
+    /// 本メソッドは例外を投げない (照会不能は戻り値で表現する)。
+    /// </summary>
+    public async Task<KabuPositionsResponse> GetPositionsAsync(CancellationToken ct = default)
     {
-        var url = $"{_options.BaseUrl.TrimEnd('/')}/positions?product={_options.Product}";
-        using var req = await BuildGetRequestAsync(url, ct);
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        cts.CancelAfter(TimeSpan.FromSeconds(_options.QueryTimeoutSeconds));
+        string body;
+        int status;
+        try
+        {
+            var url = $"{_options.BaseUrl.TrimEnd('/')}/positions?product={_options.Product}";
+            using var req = await BuildGetRequestAsync(url, ct);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(_options.QueryTimeoutSeconds));
 
-        using var response = await _http.SendAsync(req, cts.Token);
-        var body = await response.Content.ReadAsStringAsync(ct);
-        _logger.LogDebug(
-            "/positions 応答: product={Product} ステータス={Status} body長={Len}",
-            _options.Product, (int)response.StatusCode, body.Length);
-        if (string.IsNullOrWhiteSpace(body)) return Array.Empty<KabuPositionDto>();
-        // kabu は未認証・セッション外 (kabu Station ログアウト時) などで、建玉配列でなく
-        // エラーエンベロープ {"Code":...,"Message":...} を返す (例: Code=4001007 ログイン認証エラー)。
-        // これは想定内なので、例外スタック付き警告で 30 秒ごとにログを埋めず、Debug で簡潔に記録し
-        // 空を返す (UI ログのノイズ抑制)。配列 '[' で始まらない応答＝建玉なしとして扱う。
+            using var response = await _http.SendAsync(req, cts.Token);
+            status = (int)response.StatusCode;
+            body = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogDebug(
+                "/positions 応答: product={Product} ステータス={Status} body長={Len}",
+                _options.Product, status, body.Length);
+
+            // HTTP 非 2xx (401 未認証・503 メンテ等) は「読めなかった」。確定情報として扱わない。
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogDebug(
+                    "/positions が HTTP {Status} (未認証/メンテ窓の想定内)。照会不能として扱う。", status);
+                return KabuPositionsResponse.Unavailable;
+            }
+        }
+        catch (Exception ex)
+        {
+            // 通信エラー・タイムアウト・トークン取得失敗。kabu 未接続の可能性。例外を投げず照会不能で返す。
+            _logger.LogDebug(ex, "/positions 照会で例外 (kabu 未接続/タイムアウトの可能性)。照会不能として扱う。");
+            return KabuPositionsResponse.Unavailable;
+        }
+
+        // 空ボディ = 読めなかった (建玉ゼロではない)。
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            _logger.LogDebug("/positions 応答が空ボディ (未認証/セッション外の想定内)。照会不能として扱う。");
+            return KabuPositionsResponse.Unavailable;
+        }
+        // 建玉配列でなくエラーエンベロープ {"Code":...,"Message":...} (例: Code=4001007 ログイン認証エラー)。
+        // 配列 '[' で始まらない応答は「読めなかった」。建玉なし (Available の 0 件) とは区別する。
         if (!body.TrimStart().StartsWith('['))
         {
             _logger.LogDebug(
-                "/positions が建玉配列でない応答 (未認証/セッション外の想定内): body={Body}", body);
-            return Array.Empty<KabuPositionDto>();
+                "/positions が建玉配列でない応答 (未認証/セッション外の想定内)。照会不能として扱う: body={Body}", body);
+            return KabuPositionsResponse.Unavailable;
         }
         try
         {
             var list = System.Text.Json.JsonSerializer.Deserialize<KabuPositionDto[]>(body);
-            return list ?? Array.Empty<KabuPositionDto>();
+            // 配列として確定的に読めた (null/空配列 = 確定的に建玉ゼロ → Available)。
+            return KabuPositionsResponse.Available(list ?? Array.Empty<KabuPositionDto>());
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex,
-                "/positions の JSON パース失敗 (配列だが解析不能): body={Body}", body);
-            return Array.Empty<KabuPositionDto>();
+                "/positions の JSON パース失敗 (配列だが解析不能)。照会不能として扱う: body={Body}", body);
+            return KabuPositionsResponse.Unavailable;
         }
     }
 

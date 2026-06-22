@@ -32,8 +32,13 @@ public interface IBrokerAdapter
     /// <summary>注文を取消する。</summary>
     Task<OrderResult> CancelOrderAsync(OrderId brokerOrderId, CancellationToken ct = default);
 
-    /// <summary>現在保有中の建玉一覧を取得する。</summary>
-    Task<IReadOnlyList<PositionSnapshot>> GetPositionsAsync(CancellationToken ct = default);
+    /// <summary>
+    /// 現在保有中の建玉一覧を取得する。
+    /// 戻り値は「確定的に取得できたか (IsAvailable)」を必ず含む。未認証・セッション外・
+    /// メンテ窓・通信エラー時は IsAvailable=false を返し、空応答を「建玉ゼロ」と取り違えた
+    /// 誤除去を防ぐ。リコンサイル等の除去・prune は IsAvailable=true のときだけ行うこと。
+    /// </summary>
+    Task<BrokerPositionsResult> GetPositionsAsync(CancellationToken ct = default);
 
     /// <summary>現在の注文一覧を取得する。</summary>
     Task<IReadOnlyList<OrderSnapshot>> GetOrdersAsync(CancellationToken ct = default);
