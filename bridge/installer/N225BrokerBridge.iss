@@ -8,7 +8,7 @@
 ; ============================================================
 
 #define MyAppName       "N225AutoTrader Bridge"
-#define MyAppVersion    "0.1.0"
+#define MyAppVersion    "0.1.1"
 #define MyAppPublisher  "Takao"
 #define MyAppURL        ""
 #define MyAppExeName    "N225BrokerBridge.UI.exe"
