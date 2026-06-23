@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using N225BrokerBridge.Application.Signals;
@@ -97,6 +98,7 @@ public sealed class HttpWebhookListener : IDisposable
     {
         var request = context.Request;
         var response = context.Response;
+        string? body = null;   // ★原因記録のため catch からも参照できるよう先に宣言する
 
         try
         {
@@ -106,7 +108,6 @@ public sealed class HttpWebhookListener : IDisposable
                 return;
             }
 
-            string body;
             using (var reader = new StreamReader(request.InputStream, request.ContentEncoding ?? Encoding.UTF8))
             {
                 body = await reader.ReadToEndAsync(ct);
@@ -119,7 +120,12 @@ public sealed class HttpWebhookListener : IDisposable
             }
             catch (WebhookParseException ex)
             {
-                _logger.LogWarning(ex, "Webhook parse failed");
+                // ★なぜ弾いたかの大元を必ず残す: 送信元 IP:Port・User-Agent・Content-Type/Length・
+                //   受信本文そのもの (passphrase はマスク)。これで「何が・どこから来たか」が追える。
+                _logger.LogWarning(ex,
+                    "Webhook parse failed: from={Remote} ua={UserAgent} type={ContentType} len={Length} body={Body}",
+                    request.RemoteEndPoint, request.UserAgent, request.ContentType, request.ContentLength64,
+                    MaskSecrets(body));
                 await RespondAsync(response, 400, "Bad Request: " + ex.Message);
                 return;
             }
@@ -131,9 +137,26 @@ public sealed class HttpWebhookListener : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled error in webhook handler");
+            // ★未処理エラーも送信元と受信本文 (マスク) を残し、原因を追えるようにする。
+            _logger.LogError(ex,
+                "Unhandled error in webhook handler: from={Remote} body={Body}",
+                request.RemoteEndPoint, MaskSecrets(body));
             try { await RespondAsync(response, 500, "Internal Server Error"); } catch { }
         }
+    }
+
+    /// <summary>
+    /// ログ出力用に本文中の秘密情報をマスクする。passphrase の値を *** に置換する
+    /// (CLAUDE.md: passphrase は画面・ログ・コミットに残さない)。本文の他フィールドはそのまま残す。
+    /// </summary>
+    private static string MaskSecrets(string? body)
+    {
+        if (string.IsNullOrEmpty(body)) return string.Empty;
+        return Regex.Replace(
+            body,
+            "(\"passphrase\"\\s*:\\s*\")[^\"]*(\")",
+            "$1***$2",
+            RegexOptions.IgnoreCase);
     }
 
     private static async Task RespondAsync(HttpListenerResponse response, int statusCode, string message)
