@@ -114,10 +114,14 @@ public sealed class AiTickForwarderService : IHostedService, IDisposable
 
         try
         {
-            // 出来高があれば売買高時刻のバーへ・無ければ現値時刻 (価格更新のみ)。UTC→JST(+9h)。
-            var jst = (volInc > 0m ? vAt : tick.At).AddHours(9);
+            // ★価格(OHLC)＝価格時刻(CurrentPriceTime)、出来高＝売買高時刻(TradingVolumeTime)で
+            //   別々のバーへ割り当てる (2026-06-24・正時境界の始値/終値が kabu とズレる根本対策)。UTC→JST(+9h)。
+            //   timestamp = 価格時刻 (OHLC のバー)、volume_time = 売買高時刻 (volume のバー)。
+            //   受信側 OHLCManager が OHLC は timestamp バー・volume は volume_time バーに分けて反映する。
+            var priceJst = (tick.At == DateTime.MinValue ? vAt : tick.At).AddHours(9);
+            var volJst = (vAt == DateTime.MinValue ? tick.At : vAt).AddHours(9);
             var line = FormattableString.Invariant(
-                $"{{\"timestamp\":\"{jst:yyyy/MM/dd HH:mm:ss}\",\"close\":{tick.LastPrice.Value},\"volume\":{(long)volInc}}}\n");
+                $"{{\"timestamp\":\"{priceJst:yyyy/MM/dd HH:mm:ss}\",\"close\":{tick.LastPrice.Value},\"volume\":{(long)volInc},\"volume_time\":\"{volJst:yyyy/MM/dd HH:mm:ss}\"}}\n");
             var bytes = Encoding.UTF8.GetBytes(line);
             lock (_gate)
             {
