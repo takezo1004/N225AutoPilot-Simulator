@@ -1,9 +1,11 @@
+using System.Globalization;
 using System.Net.Sockets;
 using System.Text;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using N225BrokerBridge.Application.Common;
 using N225BrokerBridge.Domain.Brokers;
+using N225BrokerBridge.Domain.ValueObjects;   // Price (OHLC 拡張フィールドの整形ヘルパーで使用)
 
 namespace N225BrokerBridge.Infrastructure.Integration;
 
@@ -11,8 +13,11 @@ namespace N225BrokerBridge.Infrastructure.Integration;
 /// kabu board ティックを AI (N225StrategyAI) の OHLC 受信サーバ (127.0.0.1:5000) へ
 /// 改行区切り JSON で転送する **追加サービス**。
 ///
-/// 形式 (AI 側 tcp_receiver.py の契約):
-///   {"timestamp":"yyyy/MM/dd HH:mm:ss","close":&lt;price&gt;,"volume":&lt;vol&gt;}\n   (JST)
+/// 形式 (AI 側 tcp_receiver.py の契約・全 JST):
+///   既存: {"timestamp","close","volume","volume_time"}
+///   拡張 (2026-06-29): OHLC = open/open_time, high/high_time, low/low_time (始値/高値/安値＝当日累積値・
+///     受信側が *_time で当該バーに割当)。歩み値系 = bid/bid_qty, ask/ask_qty (慣習へ正規化済), tick_dir
+///     (+1/-1/0), price_status (現値前値比較生コード), vwap, cum_volume。価格未提供は JSON null・時刻未提供は ""。
 ///
 /// 設計: ブリッジ→AI のデータ供給路。AI は自前で kabu に接続しない (単一トークン則の衝突回避)。
 /// 既存ロジックは一切変更しない純粋な追加。price stream (IPriceUpdateNotifier) を購読して送るだけ。
@@ -120,8 +125,18 @@ public sealed class AiTickForwarderService : IHostedService, IDisposable
             //   受信側 OHLCManager が OHLC は timestamp バー・volume は volume_time バーに分けて反映する。
             var priceJst = (tick.At == DateTime.MinValue ? vAt : tick.At).AddHours(9);
             var volJst = (vAt == DateTime.MinValue ? tick.At : vAt).AddHours(9);
+
+            // ── 拡張フィールド整形。価格未提供=JSON null・時刻未提供(MinValue)="" (受信側は当該バー外扱い)。──
+            //   ★kabu Bid/Ask は命名逆転: 慣習の bid(最良買)=kabu AskPrice、ask(最良売)=kabu BidPrice。
+            static string Px(Price? p) => p.HasValue ? p.Value.Value.ToString(CultureInfo.InvariantCulture) : "null";
+            static string Jst(DateTime t) => t == DateTime.MinValue
+                ? "" : t.AddHours(9).ToString("yyyy/MM/dd HH:mm:ss", CultureInfo.InvariantCulture);
+            int tickDir = tick.ChangeStatus == "0057" ? 1 : tick.ChangeStatus == "0058" ? -1 : 0;
+            string openS = Px(tick.Open), highS = Px(tick.High), lowS = Px(tick.Low);
+            string openT = Jst(tick.OpenAt), highT = Jst(tick.HighAt), lowT = Jst(tick.LowAt);
+
             var line = FormattableString.Invariant(
-                $"{{\"timestamp\":\"{priceJst:yyyy/MM/dd HH:mm:ss}\",\"close\":{tick.LastPrice.Value},\"volume\":{(long)volInc},\"volume_time\":\"{volJst:yyyy/MM/dd HH:mm:ss}\"}}\n");
+                $"{{\"timestamp\":\"{priceJst:yyyy/MM/dd HH:mm:ss}\",\"close\":{tick.LastPrice.Value},\"volume\":{(long)volInc},\"volume_time\":\"{volJst:yyyy/MM/dd HH:mm:ss}\",\"open\":{openS},\"open_time\":\"{openT}\",\"high\":{highS},\"high_time\":\"{highT}\",\"low\":{lowS},\"low_time\":\"{lowT}\",\"bid\":{tick.AskPrice.Value},\"bid_qty\":{tick.AskQty},\"ask\":{tick.BidPrice.Value},\"ask_qty\":{tick.BidQty},\"tick_dir\":{tickDir},\"price_status\":\"{tick.ChangeStatus}\",\"vwap\":{tick.Vwap},\"cum_volume\":{(long)cum}}}\n");
             var bytes = Encoding.UTF8.GetBytes(line);
             lock (_gate)
             {

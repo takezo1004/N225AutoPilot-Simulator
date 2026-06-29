@@ -131,7 +131,21 @@ public sealed class KabuBoardWebSocketService : IHostedService, IPriceUpdateNoti
                     AskPrice: new Price(SafeDecimal(board.AskPrice)),
                     At: ParseTime(board.CurrentPriceTime),
                     Volume: board.TradingVolume > 0 ? (decimal)board.TradingVolume : 0m,
-                    VolumeAt: ParseVolumeTime(board.TradingVolumeTime));
+                    VolumeAt: ParseVolumeTime(board.TradingVolumeTime))
+                {
+                    // ── 拡張 (2026-06-29): 同一 board スナップショットの OHLC ＋ 歩み値系を載せる。──
+                    //   時刻は ParseVolumeTime (未提供は MinValue ＝受信側が「当該バー外」とみなす安全側)。
+                    Open = board.OpeningPrice > 0 ? new Price((decimal)board.OpeningPrice) : (Price?)null,
+                    OpenAt = ParseVolumeTime(board.OpeningPriceTime),
+                    High = board.HighPrice > 0 ? new Price((decimal)board.HighPrice) : (Price?)null,
+                    HighAt = ParseVolumeTime(board.HighPriceTime),
+                    Low = board.LowPrice > 0 ? new Price((decimal)board.LowPrice) : (Price?)null,
+                    LowAt = ParseVolumeTime(board.LowPriceTime),
+                    BidQty = board.BidQty > 0 ? (decimal)board.BidQty : 0m,   // kabu BidQty = 通常 ASK 数量
+                    AskQty = board.AskQty > 0 ? (decimal)board.AskQty : 0m,   // kabu AskQty = 通常 BID 数量
+                    Vwap = board.VWAP > 0 ? (decimal)board.VWAP : 0m,
+                    ChangeStatus = board.CurrentPriceChangeStatus ?? "",
+                };
 
                 _adapter.PushPriceTick(tick);
                 _logger.LogDebug(
@@ -184,8 +198,18 @@ internal sealed class KabuBoardPushDto
     [JsonPropertyName("Symbol")] public string? Symbol { get; set; }
     [JsonPropertyName("CurrentPrice")] public double CurrentPrice { get; set; }
     [JsonPropertyName("CurrentPriceTime")] public string? CurrentPriceTime { get; set; }
+    [JsonPropertyName("CurrentPriceChangeStatus")] public string? CurrentPriceChangeStatus { get; set; } // 現値前値比較(0057=UP/0058=DOWN/0059=寄り初値等)
     [JsonPropertyName("BidPrice")] public double BidPrice { get; set; }
+    [JsonPropertyName("BidQty")] public double BidQty { get; set; }                     // 最良売気配数量(= 通常 ASK 数量)
     [JsonPropertyName("AskPrice")] public double AskPrice { get; set; }
+    [JsonPropertyName("AskQty")] public double AskQty { get; set; }                     // 最良買気配数量(= 通常 BID 数量)
+    [JsonPropertyName("OpeningPrice")] public double OpeningPrice { get; set; }         // 始値(当日寄付)
+    [JsonPropertyName("OpeningPriceTime")] public string? OpeningPriceTime { get; set; }
+    [JsonPropertyName("HighPrice")] public double HighPrice { get; set; }               // 高値(当日累積)
+    [JsonPropertyName("HighPriceTime")] public string? HighPriceTime { get; set; }
+    [JsonPropertyName("LowPrice")] public double LowPrice { get; set; }                 // 安値(当日累積)
+    [JsonPropertyName("LowPriceTime")] public string? LowPriceTime { get; set; }
     [JsonPropertyName("TradingVolume")] public double TradingVolume { get; set; }       // 当日累積売買高
     [JsonPropertyName("TradingVolumeTime")] public string? TradingVolumeTime { get; set; } // 売買高時刻
+    [JsonPropertyName("VWAP")] public double VWAP { get; set; }                         // 当日VWAP
 }
